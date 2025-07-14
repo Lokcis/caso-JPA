@@ -43,11 +43,11 @@ public class CompetitorService {
     }
 
     @GET
+    @Path("/get")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAll() {
         Query q = em.createQuery("SELECT U FROM COMPETITOR U ORDER BY U.SURNAME ASC");
         List<Competitor> competitors = q.getResultList();
-
         return Response.status(200).header("Access-Control-Allow-Origin", "*").entity(competitors).build();
     }
 
@@ -57,6 +57,14 @@ public class CompetitorService {
     public Response createCompetitor(CompetitorDTO competitor) {
         JSONObject rta = new JSONObject();
         Competitor competitorTmp = new Competitor(competitor.getName(), competitor.getSurname(), competitor.getAge(), competitor.getTelephone(), competitor.getCellphone(), competitor.getAddress(), competitor.getCity(), competitor.getCountry(), false);
+        competitorTmp.setAddress(competitor.getAddress());
+        competitorTmp.setAge(competitor.getAge());
+        competitorTmp.setCellphone(competitor.getCellphone());
+        competitorTmp.setCity(competitor.getCity());
+        competitorTmp.setCountry(competitor.getCountry());
+        competitorTmp.setName(competitor.getName());
+        competitorTmp.setSurname(competitor.getSurname());
+        competitorTmp.setTelephone(competitor.getTelephone());
         try {
             em.getTransaction().begin();
             em.persist(competitorTmp);

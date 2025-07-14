@@ -8,11 +8,14 @@ package com.example.models;
 import com.sun.istack.NotNull;
 import java.io.Serializable;
 import java.util.Calendar;
+import java.util.Set;
+import static javax.persistence.CascadeType.ALL;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Temporal;
@@ -41,6 +44,12 @@ public class Competitor implements Serializable {
     @Temporal(TemporalType.DATE)
     private Calendar updatedAt;
 
+    @Column(unique = true, nullable = false)
+    private String email;
+
+    @Column(nullable = false)
+    private String password;
+
     private String name;
 
     private String surname;
@@ -59,6 +68,9 @@ public class Competitor implements Serializable {
 
     private boolean winner;
 
+    @OneToMany(cascade = ALL, mappedBy = "competitor")
+    private Set<Producto> products;
+
     public Competitor() {
 
     }
@@ -73,6 +85,10 @@ public class Competitor implements Serializable {
         city = cityN;
         country = countryN;
         winner = winnerN;
+    }
+
+    public Set<Producto> getProducts() {
+        return products;
     }
 
     public String getName() {
@@ -165,6 +181,26 @@ public class Competitor implements Serializable {
 
     public void setCountry(String country) {
         this.country = country;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public void setProducts(Set<Producto> products) {
+        this.products = products;
     }
 
     public boolean isWinner() {
