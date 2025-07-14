@@ -5,16 +5,22 @@
  */
 package com.example.services;
 
+import com.example.PersistenceManager;
 import com.example.models.Competitor;
 import com.example.models.CompetitorDTO;
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.PostConstruct;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import org.json.simple.JSONObject;
 
 /**
  *
@@ -24,17 +30,24 @@ import javax.ws.rs.core.Response;
 @Produces(MediaType.APPLICATION_JSON)
 public class CompetitorService {
 
+    @PersistenceContext(unitName = "competitorPU")
+    EntityManager em;
+
+    @PostConstruct
+    public void init() {
+        try {
+            em = PersistenceManager.getInstance().getEntityManagerFactory().createEntityManager();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAll() {
+        Query q = em.createQuery("SELECT U FROM COMPETITOR U ORDER BY U.SURNAME ASC");
+        List<Competitor> competitors = q.getResultList();
 
-        
-        List<Competitor> competitors = new ArrayList<Competitor>();
-        Competitor competitorTmp= new Competitor("Carlos", "Alvarez", 35, "7658463", "3206574839 ", "carlos.alvarez@gmail.com", "Bogota", "Colombia", false);
-        Competitor competitorTmp2= new Competitor("Gustavo", "Ruiz", 55, "2435231", "3101325467", "gustavo.ruiz@gmail.com", "Buenos Aires", "Argentina", false);
-        competitors.add(competitorTmp);
-        competitors.add(competitorTmp2);
         return Response.status(200).header("Access-Control-Allow-Origin", "*").entity(competitors).build();
     }
 
@@ -42,9 +55,27 @@ public class CompetitorService {
     @Path("/add")
     @Produces(MediaType.APPLICATION_JSON)
     public Response createCompetitor(CompetitorDTO competitor) {
+        JSONObject rta = new JSONObject();
+        Competitor competitorTmp = new Competitor(competitor.getName(), competitor.getSurname(), competitor.getAge(), competitor.getTelephone(), competitor.getCellphone(), competitor.getAddress(), competitor.getCity(), competitor.getCountry(), false);
+        try {
+            em.getTransaction().begin();
+            em.persist(competitorTmp);
+            em.getTransaction().commit();
+            em.refresh(competitorTmp);
+            rta.put("competitorId", competitorTmp.getId());
+        } catch (Throwable t) {
+            t.printStackTrace();
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            competitorTmp = null;
+        } finally {
+            em.clear();
+            em.close();
+        }
 
-        Competitor competitorTmp= new Competitor(competitor.getName(), competitor.getSurname(), competitor.getAge(), competitor.getTelephone(), competitor.getCellphone(), competitor.getAddress(), competitor.getCity(), competitor.getCountry(), false);
-        return Response.status(200).header("Access-Control-Allow-Origin", "*").entity(competitorTmp).build();
+        return Response.status(200).header("Access-Control-Allow-Origin", "*").entity(rta).build();
+
     }
 
 }
