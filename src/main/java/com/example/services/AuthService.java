@@ -5,6 +5,7 @@
  */
 package com.example.services;
 
+import com.example.PersistenceManager;
 import com.example.models.Competitor;
 
 import javax.persistence.*;
@@ -12,51 +13,81 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
+import javax.annotation.PostConstruct;
 
 /**
  *
  * @author lokci
  */
 @Path("/auth")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class AuthService {
 
-    @PersistenceUnit(unitName = "competitorPU")
-    private EntityManagerFactory emf;
+    private EntityManager em;
+
+    @PostConstruct
+    public void init() {
+        try {
+            em = PersistenceManager.getInstance().getEntityManagerFactory().createEntityManager();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     @POST
     @Path("/login")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Competitor login(@FormParam("email") String email, @FormParam("password") String password) {
-
-        EntityManager em = emf.createEntityManager();
-
+    public Response login(Credentials creds) {
         try {
-            // Buscar al competidor por su email
-            Query query = em.createQuery("SELECT c FROM Competitor c WHERE c.email = :email");
-            query.setParameter("email", email);
-
-            List<Competitor> results = query.getResultList();
-
-            if (results.isEmpty()) {
-                // No existe un usuario con ese email
-                throw new WebApplicationException(Response.status(Response.Status.UNAUTHORIZED).entity("Contraseña incorrecta").build());
-
+            if (em == null) {
+                em = PersistenceManager.getInstance().getEntityManagerFactory().createEntityManager();
             }
 
-            Competitor competitor = results.get(0);
+            Query q = em.createQuery("SELECT c FROM Competitor c WHERE c.email = :email AND c.password = :password");
+            q.setParameter("email", creds.getEmail());
+            q.setParameter("password", creds.getPassword());
 
-            if (!competitor.getPassword().equals(password)) {
-                // Contraseña incorrecta
-                throw new WebApplicationException(Response.status(Response.Status.UNAUTHORIZED).entity("Contraseña incorrecta").build());
+            Competitor c = (Competitor) q.getSingleResult();
 
-            }
+            return Response.status(200)
+                    .header("Access-Control-Allow-Origin", "*")
+                    .entity(c)
+                    .build();
 
-            // Todo correcto, se devuelve el competidor
-            return competitor;
+        } catch (NoResultException e) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("Credenciales inválidas")
+                    .type(MediaType.TEXT_PLAIN)
+                    .build();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return Response.status(500).entity("Error interno en el servidor").build();
+        }
+    }
 
-        } finally {
-            em.close();
+    // Clase auxiliar para recibir email y password
+    public static class Credentials {
+
+        private String email;
+        private String password;
+
+        public Credentials() {
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
         }
     }
 }
